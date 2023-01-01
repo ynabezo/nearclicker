@@ -20,16 +20,38 @@ gcnt=0
 gdcnt=0
 gucnt=0
 gswevt=False
+#gswevt=True
+(gd,gx,gy)=(0,0,0)
+gimg=None
+gimgflg=True
 
 app=tkinter.Tk()
-canvas = tkinter.Canvas(
+def forminit(app):
+    global canvas
+    frame = tkinter.Frame(app)
+    frame.pack(fill = tkinter.BOTH, padx=5, pady=10)
+    button1=tkinter.Button(frame,width=10,height=3
+            ,text="end")
+    button1.bind("<Button-1>" ,ebtnend)
+    button1.bind("<Button-2>" ,ebtnend,'+')
+    button1.bind("<Button-3>" ,ebtnend,'+')
+    button1.pack()
+
+    canvas = tkinter.Canvas(
     app,
-    width=600,
-    height=600
-)
-canvas.pack()
-
-
+    image=None,
+    width=cns_imgsize,
+    height=cns_imgsize
+    )
+    canvas.pack()
+    canvas.create_image(0,0,image=None,tag='img')
+    app.title("nearclicker")
+    app.resizable(0,0)
+    app.attributes("-topmost", True)
+def ebtnend(event):
+    global app
+    app.quit()
+    return
 def ldown(e):
     global gdcnt,gcnt,gswevt
     if gswevt:
@@ -37,13 +59,13 @@ def ldown(e):
         return True
     print("ldown")
     gcnt=gcnt+1
-    gdcnt+=1
+    gdcnt+=1        #down count
     if gdcnt==1:
         mx=e.Position[0]
         my=e.Position[1]
-        t=threading.Timer(0.4,pcheck,args=(mx,my))
+        t=threading.Timer(0.4,clickcheck,args=(mx,my))
         t.start()
-        g=threading.Thread(target=pgetxy,args=(mx,my))
+        g=threading.Thread(target=p_getxy,args=(mx,my))
         g.start()
     return False
 def lup(e):
@@ -55,25 +77,24 @@ def lup(e):
     gcnt=gcnt+1
     if gdcnt==0:
         return True 
-    gucnt+=1
+    gucnt+=1        #up count
     return False
 
-def pcheck(mx,my):
+def clickcheck(mx,my):
     global gd,gx,gy,gimg
-    print(gd,gx,gy)
     global gdcnt,gucnt,gswevt
     if gdcnt==1 and gucnt==1:
-        #click
+        print("click")
         gswevt=True
         pyautogui.move(gx,gy)
         pyautogui.click()
     elif gdcnt==2 and gucnt==2:
-        #dblclick
+        print("dblclick")
         gswevt=True
         pyautogui.move(gx,gy)
         pyautogui.doubleClick()
     elif gdcnt==1 and gucnt==0:
-        #ldown
+        print("drag")
         gswevt=True
         pyautogui.move(gx,gy)
         pyautogui.mouseDown()
@@ -82,10 +103,12 @@ def pcheck(mx,my):
     gucnt=0
     gswevt=False
     
-def pgetxy(mx,my):
-    global gd,gx,gy,gimg
+def p_getxy(mx,my):
+    global gd,gx,gy,gimg,gimgflg
     (gd,gx,gy)=(0,0,0)
     gimg,gd,gx,gy=getxy(mx,my)
+    gimgflg=True
+    return
 
 def getmouseposition():
     (x,y)=pyautogui.position()
@@ -189,6 +212,7 @@ def getdistance(x1,y1,x2,y2):
 
 def getxy(mx,my):
     global cns_area,cns_imgsize
+    print("getxy",mx,my)
     k=0
     (x,y)=(0,0)
     img=getcapimg(mx,my,cns_imgsize)
@@ -202,10 +226,9 @@ def getxy(mx,my):
     return img,k,x,y
 
 def test():
-    global app,canvas,gimg,time_sta
+    global app,canvas,gimg,time_sta,img_TK
     pythoncom.PumpWaitingMessages
     img_PIL=getcapimg(0,0,100)
-    print(img_PIL)
         
     #img_PIL = Image.fromarray(img) # RGBからPILフォーマットへ変換
     img_TK  = ImageTk.PhotoImage(image=img_PIL) # ImageTkフォーマットへ変換
@@ -215,30 +238,27 @@ def test():
     canvas.create_image(100, 100, image=img_TK , anchor='nw', tag='img')
     app.after(1000, test)
 
-
 def main():
-    global app,canvas,gimg,time_sta
+    global app,canvas,gimg,gimgflg,img_TK,time_sta
     pythoncom.PumpWaitingMessages
     time_end = time.perf_counter()
     tim = time_end- time_sta
-    if tim > 0.25:
+    #if tim > 0.25:
+    if gimgflg==True:
         img_PIL = Image.fromarray(gimg) # RGBからPILフォーマットへ変換
         img_TK  = ImageTk.PhotoImage(img_PIL) # ImageTkフォーマットへ変換
-
         canvas.delete('img')
         canvas.create_image(0, 0, image=img_TK
                 ,  anchor='nw', tag='img')
-        cv2.imshow('img',gimg)
-
+        gimgflg=False
         #d,x,y = getxy(mx,my)
         time_sta = time.perf_counter()
-    key=cv2.waitKey(1)
-    if key ==ord('q'):return
     app.after(10, main)
 
 if __name__ == "__main__":
     gcnt=0
     (x,y)=(0,0)
+    forminit(app)
     hm = pyWinhook.HookManager()
     hm.MouseLeftDown = ldown
     hm.MouseLeftUp = lup
@@ -247,8 +267,7 @@ if __name__ == "__main__":
     gimg,d,x,y = getxy(mx,my)
 
     time_sta = time.perf_counter()
-    #main()
-    test()
+    main()
     app.mainloop()
     #while True:
     #    main(time_sta)
