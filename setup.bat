@@ -1,5 +1,5 @@
 
-yinstaller nearclicker.py --onefile --noconsole
+pyinstaller nearclicker.py --onefile --noconsole
 
 
 pause
